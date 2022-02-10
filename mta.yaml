@@ -1,0 +1,92 @@
+_schema-version: "3.2"
+ID: ecilayout
+version: 0.0.1
+modules:
+- name: ecilayout-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: ecilayout-destination-service
+    parameters:
+      content-target: true
+  - name: ecilayout_html_repo_host
+    parameters:
+      service-key:
+        name: ecilayout_html_repo_host-key
+  - name: uaa_ecilayout
+    parameters:
+      service-key:
+        name: uaa_ecilayout-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: ecilay_ecilayout_html_repo_host
+          ServiceInstanceName: ecilayout-html5-app-host-service
+          ServiceKeyName: ecilayout_html_repo_host-key
+          sap.cloud.service: ecilay
+        - Authentication: OAuth2UserTokenExchange
+          Name: ecilay_uaa_ecilayout
+          ServiceInstanceName: ecilayout-xsuaa-service
+          ServiceKeyName: uaa_ecilayout-key
+          sap.cloud.service: ecilay
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: ecilayout-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: ecilayout_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - project1.zip
+      name: project1
+      target-path: resources/
+- name: project1
+  type: html5
+  path: project1
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: ecilayout-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: ecilayout-destination-service
+    service-plan: lite
+- name: ecilayout_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: ecilayout-html5-app-host-service
+    service-plan: app-host
+- name: uaa_ecilayout
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: ecilayout-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
